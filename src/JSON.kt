@@ -14,8 +14,7 @@ fun Location.toJson() = JsonObject().apply {
   addProperty("z", blockZ)
 }
 
-fun msgOf(channel: String, data: JsonElement) = JsonObject().apply {
+fun msgOf(channel: String, data: JsonElement? = null) = JsonObject().apply {
   addProperty("channel", channel)
-  addProperty("method", "none")
-  add("data", data)
+  if (data !== null) add("data", data)
 }

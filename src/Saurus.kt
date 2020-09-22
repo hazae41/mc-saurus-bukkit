@@ -77,21 +77,30 @@ class Saurus : JavaPlugin() {
     return data
   }
 
-  suspend fun WebSocketSession.onconnect(password: String) {
-    session = this;
-    onopen()
-
-    val hello = JsonObject().apply {
+  suspend fun WebSocketSession.sendHello(password: String) {
+    val hello = msgOf("hello", JsonObject().apply {
       addProperty("type", "server")
       addProperty("platform", "bukkit")
       addProperty("password", password)
-    }
+    })
 
     send(hello.toString())
+  }
 
-    val hello2 = parse(incoming.receive())
-    val id = hello2.get("id").asNumber
-    println("id: $id")
+  suspend fun WebSocketSession.recvHello() {
+    val input = parse(incoming.receive())
+
+    val channel = input.get("channel").asString
+    println("channel: $channel")
+
+    val data = input.get("data").asJsonObject
+    val uuid = data.get("uuid").asNumber
+    println("uuid: $uuid")
+  }
+
+  suspend fun WebSocketSession.onconnect() {
+    session = this;
+    onopen()
 
     for (frame in incoming)
       onmessage(frame)
@@ -109,7 +118,9 @@ class Saurus : JavaPlugin() {
       try {
         client.wss(url) {
           logger.info("Connected")
-          onconnect(password)
+          sendHello(password)
+          recvHello()
+          onconnect()
           logger.info("Disconnected")
         }
       } catch (e: Exception) {
