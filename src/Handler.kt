@@ -1,5 +1,5 @@
 import com.google.gson.JsonObject
-import io.ktor.http.cio.websocket.*
+import com.google.gson.JsonPrimitive
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -18,6 +18,7 @@ class Handler(val saurus: Saurus) : Listener {
   fun onlogin(e: PlayerLoginEvent) {
     if (saurus.session != null) return;
     e.result = PlayerLoginEvent.Result.KICK_OTHER
+    e.kickMessage = "Server is not ready"
   }
 
   @EventHandler
@@ -25,13 +26,13 @@ class Handler(val saurus: Saurus) : Listener {
     val session = saurus.session ?: return;
 
     GlobalScope.launch(IO) {
-      val data = JsonObject().apply {
-        addProperty("type", "player.join")
-        add("player", e.player.toJson())
-      }
+      val events = WSChannel(session, "event")
 
-      val msg = msgOf("event", data)
-      session.send(msg.toString())
+      events.send(JsonObject().apply {
+        addProperty("type", "player.join")
+        add("location", e.player.location.toJson())
+        add("player", e.player.toJson())
+      })
     }
   }
 
@@ -40,14 +41,13 @@ class Handler(val saurus: Saurus) : Listener {
     val session = saurus.session ?: return;
 
     GlobalScope.launch(IO) {
-      val data = JsonObject().apply {
+      val events = WSChannel(session, "event")
+
+      events.send(JsonObject().apply {
         addProperty("type", "player.death")
         add("location", e.entity.location.toJson())
         add("player", e.entity.toJson())
-      }
-
-      val msg = msgOf("event", data)
-      session.send(msg.toString())
+      })
     }
   }
 
@@ -56,13 +56,13 @@ class Handler(val saurus: Saurus) : Listener {
     val session = saurus.session ?: return;
 
     GlobalScope.launch(IO) {
-      val data = JsonObject().apply {
-        addProperty("type", "player.quit")
-        add("player", e.player.toJson())
-      }
+      val events = WSChannel(session, "event")
 
-      val msg = msgOf("event", data)
-      session.send(msg.toString())
+      events.send(JsonObject().apply {
+        addProperty("type", "player.quit")
+        add("location", e.player.location.toJson())
+        add("player", e.player.toJson())
+      })
     }
   }
 
@@ -77,17 +77,15 @@ class Handler(val saurus: Saurus) : Listener {
 
   @EventHandler
   fun onmessage(e: ChannelOpenEvent) {
-    val session = saurus.session ?: return;
-
     val logger = saurus.logger
     val server = saurus.server
 
-    logger.info(e.action + e.data.toString())
+    logger.info(e.path + e.data.toString())
 
-    val action = e.action
-    val split = action.split(".")
-    val first = split.getOrNull(0)
-    val second = split.getOrNull(1)
+    val path = e.path
+    val split = path.split("/")
+    val first = split.getOrNull(1)
+    val second = split.getOrNull(2)
 
     if (first == "execute") {
       val command = e.data.asString
@@ -95,12 +93,7 @@ class Handler(val saurus: Saurus) : Listener {
       val done = server.dispatchCommand(sender, command)
 
       GlobalScope.launch(IO) {
-        val msg = JsonObject().apply {
-          addProperty("channel", e.channel)
-          addProperty("data", done)
-        }
-
-        session.send(msg.toString())
+        e.channel.close(JsonPrimitive(done))
       }
     }
 
@@ -115,17 +108,29 @@ class Handler(val saurus: Saurus) : Listener {
       if (second == "kick") {
         val reason = data.get("reason").asString
         player.kickPlayer(reason)
+
+        GlobalScope.launch(IO) {
+          e.channel.close()
+        }
       }
 
       if (second == "message") {
         val message = data.get("message").asString
         player.sendMessage(message)
+
+        GlobalScope.launch(IO) {
+          e.channel.close()
+        }
       }
 
       if (second == "actionbar") {
         val message = data.get("message").asString
         val text = TextComponent.fromLegacyText(message)
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, *text)
+
+        GlobalScope.launch(IO) {
+          e.channel.close()
+        }
       }
 
       if (second == "title") {
@@ -137,6 +142,10 @@ class Handler(val saurus: Saurus) : Listener {
         val fadeout = data.get("fadeout")?.asInt ?: 20
 
         player.sendTitle(title, subtitle, fadein, stay, fadeout)
+
+        GlobalScope.launch(IO) {
+          e.channel.close()
+        }
       }
     }
 

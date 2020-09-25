@@ -1,4 +1,4 @@
-import com.google.gson.JsonObject
+import com.google.gson.JsonElement
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 
@@ -22,11 +22,11 @@ class CloseEvent() : Event() {
   }
 }
 
-class ChannelOpenEvent(val json: JsonObject) : Event() {
-  val channel get() = json.get("channel").asString
-  val action get() = json.get("action").asString
-  val data get() = json.get("data")
-
+class ChannelOpenEvent(
+  val channel: WSChannel,
+  val path: String,
+  val data: JsonElement
+) : Event() {
   override fun getHandlers() = ChannelOpenEvent.handlers
 
   companion object {
@@ -36,10 +36,10 @@ class ChannelOpenEvent(val json: JsonObject) : Event() {
   }
 }
 
-class ChannelMessageEvent(val json: JsonObject) : Event() {
-  val channel get() = json.get("channel").asString
-  val data get() = json.get("data")
-
+class ChannelMessageEvent(
+  val channel: WSChannel,
+  val data: JsonElement
+) : Event() {
   override fun getHandlers() = ChannelMessageEvent.handlers
 
   companion object {
@@ -49,10 +49,10 @@ class ChannelMessageEvent(val json: JsonObject) : Event() {
   }
 }
 
-class ChannelCloseEvent(val json: JsonObject) : Event() {
-  val channel get() = json.get("channel").asString
-  val reason get() = json.get("reason").asString
-
+class ChannelCloseEvent(
+  val channel: WSChannel,
+  val reason: String
+) : Event() {
   override fun getHandlers() = ChannelCloseEvent.handlers
 
   companion object {

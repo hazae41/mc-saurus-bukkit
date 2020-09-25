@@ -12,16 +12,13 @@ import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
 
 class Saurus : JavaPlugin() {
-  val handler = Handler(this)
   var session: WebSocketSession? = null
-
-  var events = ""
 
   override fun onEnable() {
     super.onEnable()
     dataFolder.mkdir()
 
-    server.pluginManager.registerEvents(handler, this);
+    server.pluginManager.registerEvents(Handler(this), this)
 
     val password = File(dataFolder, "password.txt").run {
       if (!exists()) createNewFile()
@@ -33,43 +30,9 @@ class Saurus : JavaPlugin() {
     }
   }
 
-  fun onmessage(frame: Frame) {
-    val data = parse(frame)
-    val method = data.get("method").asString
-
-    server.scheduler.runTask(this@Saurus) { _ ->
-      if (method == "open") {
-        val e = ChannelOpenEvent(data)
-        server.pluginManager.callEvent(e)
-      }
-      if (method == "none") {
-        val e = ChannelMessageEvent(data)
-        server.pluginManager.callEvent(e)
-      }
-      if (method == "close") {
-        val e = ChannelCloseEvent(data)
-        server.pluginManager.callEvent(e)
-      }
-    }
-  }
-
-  fun onopen() {
-    server.scheduler.runTask(this@Saurus) { _ ->
-      val e = OpenEvent()
-      server.pluginManager.callEvent(e)
-    }
-  }
-
-  fun onclose() {
-    server.scheduler.runTask(this@Saurus) { _ ->
-      val e = CloseEvent()
-      server.pluginManager.callEvent(e)
-    }
-  }
-
   fun parse(frame: Frame): JsonObject {
     val text = frame as? Frame.Text
-      ?: throw IllegalArgumentException();
+      ?: throw Exception("Invalid frame type");
 
     val clz = JsonObject::class.java
     val data = Gson().fromJson(text.readText(), clz)
@@ -77,35 +40,69 @@ class Saurus : JavaPlugin() {
     return data
   }
 
-  suspend fun WebSocketSession.sendHello(password: String) {
-    val hello = msgOf("hello", JsonObject().apply {
+  fun WebSocketSession.onmessage(frame: Frame) {
+    val msg = parse(frame)
+    val uuid = msg.get("uuid").asString
+    val type = msg.get("type").asString
+    val channel = WSChannel(this, uuid)
+
+    server.scheduler.runTask(this@Saurus) { _ ->
+      if (type == "open") {
+        val path = msg.get("path").asString
+        val data = msg.get("data")
+
+        val openEvent = ChannelOpenEvent(channel, path, data)
+        server.pluginManager.callEvent(openEvent)
+      }
+
+      if (type == "other") {
+        val data = msg.get("data")
+
+        val messageEvent = ChannelMessageEvent(channel, data)
+        server.pluginManager.callEvent(messageEvent)
+      }
+
+      if (type == "close") {
+        val data = msg.get("data")
+
+        val messageEvent = ChannelMessageEvent(channel, data)
+        server.pluginManager.callEvent(messageEvent)
+
+        val closeEvent = ChannelCloseEvent(channel, "OK")
+        server.pluginManager.callEvent(closeEvent)
+      }
+
+      if (type == "error") {
+        val reason = msg.get("reason").asString
+
+        val closeEvent = ChannelCloseEvent(channel, reason)
+        server.pluginManager.callEvent(closeEvent)
+      }
+    }
+  }
+
+  suspend fun WebSocketSession.connected(password: String) {
+    session = this;
+
+    server.scheduler.runTask(this@Saurus) { _ ->
+      val e = OpenEvent()
+      server.pluginManager.callEvent(e)
+    }
+
+    WSChannel(this).open("/hello", JsonObject().apply {
       addProperty("type", "server")
       addProperty("platform", "bukkit")
       addProperty("password", password)
     })
 
-    send(hello.toString())
-  }
-
-  suspend fun WebSocketSession.recvHello() {
-    val input = parse(incoming.receive())
-
-    val channel = input.get("channel").asString
-    println("channel: $channel")
-
-    val data = input.get("data").asJsonObject
-    val uuid = data.get("uuid").asNumber
-    println("uuid: $uuid")
-  }
-
-  suspend fun WebSocketSession.onconnect() {
-    session = this;
-    onopen()
-
     for (frame in incoming)
       onmessage(frame)
 
-    onclose()
+    server.scheduler.runTask(this@Saurus) { _ ->
+      val e = CloseEvent()
+      server.pluginManager.callEvent(e)
+    }
+
     session = null;
   }
 
@@ -116,13 +113,7 @@ class Saurus : JavaPlugin() {
 
     while (true) {
       try {
-        client.wss(url) {
-          logger.info("Connected")
-          sendHello(password)
-          recvHello()
-          onconnect()
-          logger.info("Disconnected")
-        }
+        client.wss(url) { connected(password) }
       } catch (e: Exception) {
         logger.warning(e.message)
         delay(5000)
