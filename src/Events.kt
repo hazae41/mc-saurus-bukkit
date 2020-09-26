@@ -25,7 +25,7 @@ class CloseEvent() : Event() {
 class ChannelOpenEvent(
   val channel: WSChannel,
   val path: String,
-  val data: JsonElement
+  val data: JsonElement?
 ) : Event() {
   override fun getHandlers() = ChannelOpenEvent.handlers
 
@@ -38,7 +38,7 @@ class ChannelOpenEvent(
 
 class ChannelMessageEvent(
   val channel: WSChannel,
-  val data: JsonElement
+  val data: JsonElement?
 ) : Event() {
   override fun getHandlers() = ChannelMessageEvent.handlers
 

@@ -25,7 +25,6 @@ class WSChannel(
 
     val msg = JsonObject().apply {
       addProperty("uuid", uuid)
-      addProperty("type", "other")
       if (data !== null) add("data", data)
     }
 

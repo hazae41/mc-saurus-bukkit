@@ -24,12 +24,12 @@ class Handler(val saurus: Saurus) : Listener {
   @EventHandler
   fun onjoin(e: PlayerJoinEvent) {
     val session = saurus.session ?: return;
+    val events = saurus.channels.events ?: return
 
     GlobalScope.launch(IO) {
-      val events = WSChannel(session, "event")
-
-      events.send(JsonObject().apply {
-        addProperty("type", "player.join")
+      val channel = WSChannel(session, events)
+      channel.send(JsonObject().apply {
+        addProperty("event", "player.join")
         add("location", e.player.location.toJson())
         add("player", e.player.toJson())
       })
@@ -39,12 +39,12 @@ class Handler(val saurus: Saurus) : Listener {
   @EventHandler
   fun ondeath(e: PlayerDeathEvent) {
     val session = saurus.session ?: return;
+    val events = saurus.channels.events ?: return
 
     GlobalScope.launch(IO) {
-      val events = WSChannel(session, "event")
-
-      events.send(JsonObject().apply {
-        addProperty("type", "player.death")
+      val channel = WSChannel(session, events)
+      channel.send(JsonObject().apply {
+        addProperty("event", "player.death")
         add("location", e.entity.location.toJson())
         add("player", e.entity.toJson())
       })
@@ -54,12 +54,12 @@ class Handler(val saurus: Saurus) : Listener {
   @EventHandler
   fun onquit(e: PlayerQuitEvent) {
     val session = saurus.session ?: return;
+    val events = saurus.channels.events ?: return
 
     GlobalScope.launch(IO) {
-      val events = WSChannel(session, "event")
-
-      events.send(JsonObject().apply {
-        addProperty("type", "player.quit")
+      val channel = WSChannel(session, events)
+      channel.send(JsonObject().apply {
+        addProperty("event", "player.quit")
         add("location", e.player.location.toJson())
         add("player", e.player.toJson())
       })
@@ -80,15 +80,21 @@ class Handler(val saurus: Saurus) : Listener {
     val logger = saurus.logger
     val server = saurus.server
 
-    logger.info(e.path + e.data.toString())
+    logger.info("${e.path} ${e.data}")
 
     val path = e.path
     val split = path.split("/")
     val first = split.getOrNull(1)
     val second = split.getOrNull(2)
 
+    if (first == "events") {
+      if (saurus.channels.events !== null) return;
+      saurus.channels.events = e.channel.uuid
+      println("Events channel: ${e.channel.uuid}")
+    }
+
     if (first == "execute") {
-      val command = e.data.asString
+      val command = e.data!!.asString
       val sender = server.consoleSender
       val done = server.dispatchCommand(sender, command)
 
@@ -98,7 +104,7 @@ class Handler(val saurus: Saurus) : Listener {
     }
 
     if (first == "player") {
-      val data = e.data.asJsonObject
+      val data = e.data!!.asJsonObject
 
       val _player = data.get("player").asJsonObject
       val name = _player.get("name").asString

@@ -11,7 +11,13 @@ import kotlinx.coroutines.launch
 import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
 
+class Channels {
+  var hello: String? = null
+  var events: String? = null
+}
+
 class Saurus : JavaPlugin() {
+  var channels = Channels()
   var session: WebSocketSession? = null
 
   override fun onEnable() {
@@ -49,21 +55,21 @@ class Saurus : JavaPlugin() {
     server.scheduler.runTask(this@Saurus) { _ ->
       if (type == "open") {
         val path = msg.get("path").asString
-        val data = msg.get("data")
+        val data = msg.get("data") ?: null;
 
         val openEvent = ChannelOpenEvent(channel, path, data)
         server.pluginManager.callEvent(openEvent)
       }
 
       if (type == "other") {
-        val data = msg.get("data")
+        val data = msg.get("data") ?: null;
 
         val messageEvent = ChannelMessageEvent(channel, data)
         server.pluginManager.callEvent(messageEvent)
       }
 
       if (type == "close") {
-        val data = msg.get("data")
+        val data = msg.get("data") ?: null;
 
         val messageEvent = ChannelMessageEvent(channel, data)
         server.pluginManager.callEvent(messageEvent)
@@ -103,6 +109,7 @@ class Saurus : JavaPlugin() {
       server.pluginManager.callEvent(e)
     }
 
+    channels = Channels()
     session = null;
   }
 
