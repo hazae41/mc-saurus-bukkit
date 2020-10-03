@@ -8,6 +8,7 @@ import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.PlayerDeathEvent
+import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerLoginEvent
 import org.bukkit.event.player.PlayerQuitEvent
@@ -19,6 +20,30 @@ class Handler(val saurus: Saurus) : Listener {
     if (saurus.session != null) return;
     e.result = PlayerLoginEvent.Result.KICK_OTHER
     e.kickMessage = "Server is not ready"
+  }
+
+  @EventHandler
+  fun oncommand(e: PlayerCommandPreprocessEvent) {
+    val session = saurus.session ?: return;
+    val events = saurus.channels.events ?: return
+
+    val split = e.message.split(" ")
+    if (split.size != 2) return
+
+    val cmd = split[0]
+    if (cmd != "/!") return
+
+    val code = split[1]
+    e.isCancelled = true
+
+    GlobalScope.launch(IO) {
+      val channel = WSChannel(session, events)
+      channel.send(JsonObject().apply {
+        addProperty("event", "player.code")
+        add("player", e.player.toJson())
+        addProperty("code", code)
+      })
+    }
   }
 
   @EventHandler
