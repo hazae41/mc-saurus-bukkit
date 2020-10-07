@@ -22,17 +22,20 @@ class Saurus : JavaPlugin() {
 
   override fun onEnable() {
     super.onEnable()
-    dataFolder.mkdir()
+    this.saveDefaultConfig()
 
     server.pluginManager.registerEvents(Handler(this), this)
 
     val password = File(dataFolder, "password.txt").run {
-      if (!exists()) createNewFile()
+      if (!exists()) throw Exception("No password.txt file")
       readText()
     }
 
+    val host = this.config.getString("host")
+    val port = this.config.getInt("port")
+
     GlobalScope.launch(IO) {
-      connect("wss://sunship.tk:25564", password)
+      connect("wss://$host:$port", password)
     }
   }
 
