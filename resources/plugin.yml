@@ -3,3 +3,9 @@ version: "1.0"
 description: Saurus
 main: Saurus
 author: hazae41
+
+commands:
+  '!':
+    aliases: [ "saurus" ]
+    description: Saurus
+    usage: /!

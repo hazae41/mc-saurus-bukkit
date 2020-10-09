@@ -31,11 +31,16 @@ class Saurus : JavaPlugin() {
       readText()
     }
 
+    val name = this.config.getString("name")
+      ?: throw Exception("config.name is null")
+
     val host = this.config.getString("host")
-    val port = this.config.getInt("port")
+      ?: throw Exception("config.host is null")
+
+    val port = this.config.getInt("port", 8443)
 
     GlobalScope.launch(IO) {
-      connect("wss://$host:$port", password)
+      connect("wss://$host:$port", name, password)
     }
   }
 
@@ -90,7 +95,10 @@ class Saurus : JavaPlugin() {
     }
   }
 
-  suspend fun WebSocketSession.connected(password: String) {
+  suspend fun WebSocketSession.connected(
+    name: String,
+    password: String
+  ) {
     session = this;
 
     server.scheduler.runTask(this@Saurus) { _ ->
@@ -100,6 +108,7 @@ class Saurus : JavaPlugin() {
 
     WSChannel(this).open("/hello", JsonObject().apply {
       addProperty("type", "server")
+      addProperty("name", name)
       addProperty("platform", "bukkit")
       addProperty("password", password)
     })
@@ -116,14 +125,22 @@ class Saurus : JavaPlugin() {
     session = null;
   }
 
-  suspend fun connect(url: String, password: String) {
+  suspend fun connect(
+    url: String,
+    name: String,
+    password: String
+  ) {
     val client = HttpClient(CIO).config {
       install(WebSockets)
     }
 
     while (true) {
       try {
-        client.wss(url) { connected(password) }
+        client.wss(url) {
+          println("Connected")
+          connected(name, password)
+          println("Disconnected")
+        }
       } catch (e: Exception) {
         logger.warning(e.message)
         delay(5000)

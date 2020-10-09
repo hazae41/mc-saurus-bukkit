@@ -28,13 +28,10 @@ class Handler(val saurus: Saurus) : Listener {
     val events = saurus.channels.events ?: return
 
     val split = e.message.split(" ")
-    if (split.size != 2) return
-
-    val cmd = split[0]
-    if (cmd != "/!") return
+    if (split[0] != "/!") return
+    e.isCancelled = true
 
     val code = split[1]
-    e.isCancelled = true
 
     GlobalScope.launch(IO) {
       val channel = WSChannel(session, events)
