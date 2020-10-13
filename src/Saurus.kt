@@ -11,13 +11,8 @@ import kotlinx.coroutines.launch
 import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
 
-class Channels {
-  var hello: String? = null
-  var events: String? = null
-}
-
 class Saurus : JavaPlugin() {
-  var channels = Channels()
+  var events: WSChannel? = null
   var session: WebSocketSession? = null
 
   override fun onEnable() {
@@ -121,7 +116,7 @@ class Saurus : JavaPlugin() {
       server.pluginManager.callEvent(e)
     }
 
-    channels = Channels()
+    events = null
     session = null;
   }
 

@@ -1,4 +1,3 @@
-import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.GlobalScope
@@ -6,12 +5,10 @@ import kotlinx.coroutines.launch
 import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.entity.PlayerDeathEvent
-import org.bukkit.event.player.PlayerCommandPreprocessEvent
-import org.bukkit.event.player.PlayerJoinEvent
-import org.bukkit.event.player.PlayerLoginEvent
-import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.event.player.*
 
 class Handler(val saurus: Saurus) : Listener {
 
@@ -23,10 +20,14 @@ class Handler(val saurus: Saurus) : Listener {
   }
 
   @EventHandler
-  fun oncommand(e: PlayerCommandPreprocessEvent) {
-    val session = saurus.session ?: return;
-    val events = saurus.channels.events ?: return
+  fun onclose(e: CloseEvent) {
+    saurus.server.onlinePlayers.forEach {
+      it.kickPlayer("Disconnected")
+    }
+  }
 
+  @EventHandler(priority = EventPriority.NORMAL)
+  fun oncommand(e: PlayerCommandPreprocessEvent) {
     val split = e.message.split(" ")
     if (split[0] != "/!") return
     e.isCancelled = true
@@ -34,75 +35,88 @@ class Handler(val saurus: Saurus) : Listener {
     val code = split[1]
 
     GlobalScope.launch(IO) {
-      val channel = WSChannel(session, events)
-      channel.send(JsonObject().apply {
-        addProperty("event", "player.code")
-        add("player", e.player.toJson())
-        addProperty("code", code)
-      })
+      saurus.events?.send(
+        PlayerEvent("player.code", e.player).apply {
+          addProperty("code", code)
+        }
+      )
     }
   }
 
-  @EventHandler
+  @EventHandler(priority = EventPriority.MONITOR)
   fun onjoin(e: PlayerJoinEvent) {
-    val session = saurus.session ?: return;
-    val events = saurus.channels.events ?: return
-
     GlobalScope.launch(IO) {
-      val channel = WSChannel(session, events)
-      channel.send(JsonObject().apply {
-        addProperty("event", "player.join")
-        add("location", e.player.location.toJson())
-        add("player", e.player.toJson())
-      })
+      saurus.events?.send(
+        PlayerEvent("player.join", e.player).apply {
+          addProperty("message", e.joinMessage)
+        }
+      )
     }
   }
 
-  @EventHandler
+  @EventHandler(priority = EventPriority.MONITOR)
   fun ondeath(e: PlayerDeathEvent) {
-    val session = saurus.session ?: return;
-    val events = saurus.channels.events ?: return
-
     GlobalScope.launch(IO) {
-      val channel = WSChannel(session, events)
-      channel.send(JsonObject().apply {
-        addProperty("event", "player.death")
-        add("location", e.entity.location.toJson())
-        add("player", e.entity.toJson())
-      })
+      saurus.events?.send(
+        PlayerEvent("player.death", e.entity).apply {
+          addProperty("message", e.deathMessage)
+        }
+      )
     }
   }
 
-  @EventHandler
+  @EventHandler(priority = EventPriority.MONITOR)
   fun onquit(e: PlayerQuitEvent) {
-    val session = saurus.session ?: return;
-    val events = saurus.channels.events ?: return
-
     GlobalScope.launch(IO) {
-      val channel = WSChannel(session, events)
-      channel.send(JsonObject().apply {
-        addProperty("event", "player.quit")
-        add("location", e.player.location.toJson())
-        add("player", e.player.toJson())
-      })
+      saurus.events?.send(
+        PlayerEvent("player.quit", e.player).apply {
+          addProperty("message", e.quitMessage)
+        }
+      )
     }
   }
 
-  @EventHandler
-  fun onclose(e: CloseEvent) {
-    val server = saurus.server
+  @EventHandler(priority = EventPriority.MONITOR)
+  fun onrespawn(e: PlayerRespawnEvent) {
+    GlobalScope.launch(IO) {
+      saurus.events?.send(
+        PlayerEvent("player.respawn", e.player).apply {
+          add("location", e.respawnLocation.toJson())
+          addProperty("anchor", e.isAnchorSpawn)
+          addProperty("bed", e.isBedSpawn)
+        }
+      )
+    }
+  }
 
-    server.onlinePlayers.forEach {
-      it.kickPlayer("Disconnected")
+  @EventHandler(priority = EventPriority.MONITOR)
+  fun onchat(e: AsyncPlayerChatEvent) {
+    GlobalScope.launch(IO) {
+      saurus.events?.send(
+        PlayerEvent("player.chat", e.player).apply {
+          addProperty("format", e.format)
+          addProperty("message", e.message)
+        }
+      )
+    }
+  }
+
+  @EventHandler(priority = EventPriority.MONITOR)
+  fun onmove(e: PlayerMoveEvent) {
+    GlobalScope.launch(IO) {
+      saurus.events?.send(
+        PlayerEvent("player.move", e.player).apply {
+          add("from", e.from.toJson())
+          add("to", e.to?.toJson())
+        }
+      )
     }
   }
 
   @EventHandler
   fun onmessage(e: ChannelOpenEvent) {
-    val logger = saurus.logger
+    val session = saurus.session ?: return;
     val server = saurus.server
-
-    logger.info("${e.path} ${e.data}")
 
     val path = e.path
     val split = path.split("/")
@@ -110,9 +124,8 @@ class Handler(val saurus: Saurus) : Listener {
     val second = split.getOrNull(2)
 
     if (first == "events") {
-      if (saurus.channels.events !== null) return;
-      saurus.channels.events = e.channel.uuid
-      println("Events channel: ${e.channel.uuid}")
+      if (saurus.events !== null) return;
+      saurus.events = WSChannel(session, e.channel.uuid)
     }
 
     if (first == "execute") {
@@ -129,8 +142,9 @@ class Handler(val saurus: Saurus) : Listener {
       val data = e.data!!.asJsonObject
 
       val _player = data.get("player").asJsonObject
-      val name = _player.get("name").asString
-      val player = server.getPlayer(name)
+      val _name = _player.get("name").asString
+
+      val player = server.getPlayer(_name)
       if (player === null) return
 
       if (second == "kick") {
