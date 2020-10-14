@@ -3,18 +3,24 @@ import com.google.gson.JsonObject
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.features.websocket.*
+import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
+import io.ktor.util.*
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
+import java.util.concurrent.atomic.AtomicLong
 
 class Saurus : JavaPlugin() {
   var events: WSChannel? = null
   var session: WebSocketSession? = null
 
+  val lastPing = AtomicLong()
+
+  @KtorExperimentalAPI
   override fun onEnable() {
     super.onEnable()
     this.saveDefaultConfig()
@@ -35,40 +41,35 @@ class Saurus : JavaPlugin() {
     val port = this.config.getInt("port", 8443)
 
     GlobalScope.launch(IO) {
-      connect("wss://$host:$port", name, password)
+      connect(host, port, name, password)
     }
   }
 
-  fun parse(frame: Frame): JsonObject {
-    val text = frame as? Frame.Text
-      ?: throw Exception("Invalid frame type");
+  fun WebSocketSession.onmessage(frame: Frame) {
+    val text = frame as? Frame.Text ?: return;
 
     val clz = JsonObject::class.java
-    val data = Gson().fromJson(text.readText(), clz)
-
-    return data
-  }
-
-  fun WebSocketSession.onmessage(frame: Frame) {
-    val msg = parse(frame)
-    val uuid = msg.get("uuid").asString
-    val type = msg.get("type").asString
-    val channel = WSChannel(this, uuid)
+    val msg = Gson().fromJson(text.readText(), clz)
 
     server.scheduler.runTask(this@Saurus) { _ ->
+      val uuid = msg.get("uuid").asString
+      val channel = WSChannel(this, uuid)
+
+      if (!msg.has("type")) {
+        val data = msg.get("data") ?: null;
+
+        val messageEvent = ChannelMessageEvent(channel, data)
+        server.pluginManager.callEvent(messageEvent)
+      }
+
+      val type = msg.get("type").asString
+
       if (type == "open") {
         val path = msg.get("path").asString
         val data = msg.get("data") ?: null;
 
         val openEvent = ChannelOpenEvent(channel, path, data)
         server.pluginManager.callEvent(openEvent)
-      }
-
-      if (type == "other") {
-        val data = msg.get("data") ?: null;
-
-        val messageEvent = ChannelMessageEvent(channel, data)
-        server.pluginManager.callEvent(messageEvent)
       }
 
       if (type == "close") {
@@ -111,7 +112,8 @@ class Saurus : JavaPlugin() {
     for (frame in incoming)
       onmessage(frame)
 
-    server.scheduler.runTask(this@Saurus) { _ ->
+    server.scheduler.runTask(this@Saurus)
+    { _ ->
       val e = CloseEvent()
       server.pluginManager.callEvent(e)
     }
@@ -120,18 +122,20 @@ class Saurus : JavaPlugin() {
     session = null;
   }
 
+  @KtorExperimentalAPI
   suspend fun connect(
-    url: String,
+    host: String,
+    port: Int,
     name: String,
     password: String
   ) {
-    val client = HttpClient(CIO).config {
+    val client = HttpClient(CIO) {
       install(WebSockets)
     }
 
     while (true) {
       try {
-        client.wss(url) {
+        client.wss(HttpMethod.Get, host, port) {
           println("Connected")
           connected(name, password)
           println("Disconnected")
