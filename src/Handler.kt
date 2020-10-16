@@ -1,9 +1,8 @@
+import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import net.md_5.bungee.api.ChatMessageType
-import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -101,95 +100,62 @@ class Handler(val saurus: Saurus) : Listener {
     }
   }
 
-  @EventHandler(priority = EventPriority.MONITOR)
-  fun onmove(e: PlayerMoveEvent) {
-    GlobalScope.launch(IO) {
-      saurus.events?.send(
-        PlayerEvent("player.move", e.player).apply {
-          add("from", e.from.toJson())
-          add("to", e.to?.toJson())
-        }
-      )
-    }
+  fun handleEvents(channel: WSChannel) {
+    if (saurus.events !== null)
+      throw Exception("Already opened")
+
+    val session = saurus.session!!
+    val uuid = channel.uuid
+
+    saurus.events = WSChannel(session, uuid)
+  }
+
+  fun handleExecute(channel: WSChannel, data: JsonElement) {
+    val server = saurus.server
+    val command = data.asString
+    val sender = server.consoleSender
+
+    val done = server.dispatchCommand(sender, command)
+      .let(::JsonPrimitive)
+
+    GlobalScope.launch(IO) { channel.close(done) }
+  }
+
+  fun handlePlayer(channel: WSChannel, _data: JsonElement, path: String?) {
+    val data = _data.asJsonObject
+
+    val _player = data.get("player").asJsonObject
+    val _name = _player.get("name").asString
+
+    val player = saurus.server.getPlayer(_name)
+      ?: throw Exception("Invalid player")
+
+    PlayerHandler(player, channel, data)
+      .handle(path)
   }
 
   @EventHandler
   fun onmessage(e: ChannelOpenEvent) {
-    val session = saurus.session ?: return;
-    val server = saurus.server
+    try {
+      val path = e.path
 
-    val path = e.path
-    val split = path.split("/")
-    val first = split.getOrNull(1)
-    val second = split.getOrNull(2)
+      val split = path.split("/")
+      val first = split.getOrNull(1)
+      val second = split.getOrNull(2)
 
-    if (first == "events") {
-      if (saurus.events !== null) return;
-      saurus.events = WSChannel(session, e.channel.uuid)
-    }
+      if (first == "events")
+        handleEvents(e.channel)
 
-    if (first == "execute") {
-      val command = e.data!!.asString
-      val sender = server.consoleSender
-      val done = server.dispatchCommand(sender, command)
+      if (first == "execute")
+        handleExecute(e.channel, e.data!!)
 
+      if (first == "player")
+        handlePlayer(e.channel, e.data!!, second)
+
+    } catch (ex: Exception) {
       GlobalScope.launch(IO) {
-        e.channel.close(JsonPrimitive(done))
+        e.channel.error(ex.message)
       }
     }
-
-    if (first == "player") {
-      val data = e.data!!.asJsonObject
-
-      val _player = data.get("player").asJsonObject
-      val _name = _player.get("name").asString
-
-      val player = server.getPlayer(_name)
-      if (player === null) return
-
-      if (second == "kick") {
-        val reason = data.get("reason").asString
-        player.kickPlayer(reason)
-
-        GlobalScope.launch(IO) {
-          e.channel.close()
-        }
-      }
-
-      if (second == "message") {
-        val message = data.get("message").asString
-        player.sendMessage(message)
-
-        GlobalScope.launch(IO) {
-          e.channel.close()
-        }
-      }
-
-      if (second == "actionbar") {
-        val message = data.get("message").asString
-        val text = TextComponent.fromLegacyText(message)
-        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, *text)
-
-        GlobalScope.launch(IO) {
-          e.channel.close()
-        }
-      }
-
-      if (second == "title") {
-        val title = data.get("title").asString
-        val subtitle = data.get("subtitle").asString
-
-        val fadein = data.get("fadein")?.asInt ?: 10
-        val stay = data.get("stay")?.asInt ?: 70
-        val fadeout = data.get("fadeout")?.asInt ?: 20
-
-        player.sendTitle(title, subtitle, fadein, stay, fadeout)
-
-        GlobalScope.launch(IO) {
-          e.channel.close()
-        }
-      }
-    }
-
   }
 }
