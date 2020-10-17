@@ -10,15 +10,17 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import listeners.PlayerListener
+import listeners.WeatherListener
 import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicBoolean
 
 class Saurus : JavaPlugin() {
   var events: WSChannel? = null
   var session: WebSocketSession? = null
 
-  val lastPing = AtomicLong()
+  val ping = AtomicBoolean(false)
 
   @KtorExperimentalAPI
   override fun onEnable() {
@@ -26,6 +28,8 @@ class Saurus : JavaPlugin() {
     this.saveDefaultConfig()
 
     server.pluginManager.registerEvents(Handler(this), this)
+    server.pluginManager.registerEvents(PlayerListener(this), this)
+    server.pluginManager.registerEvents(WeatherListener(this), this)
 
     val password = File(dataFolder, "password.txt").run {
       if (!exists()) throw Exception("No password.txt file")
@@ -45,7 +49,13 @@ class Saurus : JavaPlugin() {
     }
   }
 
-  fun WebSocketSession.onmessage(frame: Frame) {
+  suspend fun WebSocketSession.onmessage(frame: Frame) {
+    if (frame is Frame.Ping) {
+      ping.set(true)
+      send(Frame.Pong(frame.data))
+      return;
+    }
+
     val text = frame as? Frame.Text ?: return;
 
     val clz = JsonObject::class.java
@@ -112,8 +122,7 @@ class Saurus : JavaPlugin() {
     for (frame in incoming)
       onmessage(frame)
 
-    server.scheduler.runTask(this@Saurus)
-    { _ ->
+    server.scheduler.runTask(this@Saurus) { _ ->
       val e = CloseEvent()
       server.pluginManager.callEvent(e)
     }
@@ -136,9 +145,9 @@ class Saurus : JavaPlugin() {
     while (true) {
       try {
         client.wss(HttpMethod.Get, host, port) {
-          println("Connected")
+          logger.info("Connected")
           connected(name, password)
-          println("Disconnected")
+          logger.warning("Disconnected")
         }
       } catch (e: Exception) {
         logger.warning(e.message)
