@@ -35,15 +35,21 @@ class PlayerListener(val saurus: Saurus) : Listener {
   @EventHandler(priority = EventPriority.MONITOR)
   fun onJoin(e: PlayerJoinEvent) {
     val event = PlayerEvent("player.join", e.player)
-      .apply { addProperty("message", e.joinMessage) }
-    
+      .apply {
+        add("location", e.player.location.toJson())
+        addProperty("message", e.joinMessage)
+      }
+
     saurus.sendEvent(event)
   }
 
   @EventHandler(priority = EventPriority.MONITOR)
   fun onDeath(e: PlayerDeathEvent) {
     val event = PlayerEvent("player.death", e.entity)
-      .apply { addProperty("message", e.deathMessage) }
+      .apply {
+        add("location", e.entity.location.toJson())
+        addProperty("message", e.deathMessage)
+      }
 
     saurus.sendEvent(event)
   }
@@ -51,7 +57,10 @@ class PlayerListener(val saurus: Saurus) : Listener {
   @EventHandler(priority = EventPriority.MONITOR)
   fun onQuit(e: PlayerQuitEvent) {
     val event = PlayerEvent("player.quit", e.player)
-      .apply { addProperty("message", e.quitMessage) }
+      .apply {
+        add("location", e.player.location.toJson())
+        addProperty("message", e.quitMessage)
+      }
 
     saurus.sendEvent(event)
   }
