@@ -20,14 +20,13 @@ class PlayerListener(val saurus: Saurus) : Listener {
 
   @EventHandler(priority = EventPriority.NORMAL)
   fun onCommand(e: PlayerCommandPreprocessEvent) {
-    val split = e.message.split(" ")
-    if (split[0] != "/!") return
+    if (!e.message.startsWith("/! ")) return
+    val command = e.message.substring("/! ".length)
+
     e.isCancelled = true
 
-    val code = split[1]
-
-    val event = PlayerEvent("player.code", e.player)
-      .apply { addProperty("code", code) }
+    val event = PlayerEvent("player.command", e.player)
+      .apply { addProperty("command", command) }
 
     saurus.sendEvent(event)
   }
