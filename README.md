@@ -7,11 +7,13 @@
 Edit the config
 
 ```yaml
-// Your server name
+# Your server name
 name: myserver
-// Address of your Saurus
+# Address of your Saurus
 host: mysaurus.xyz
 port: 8443
+# Disallow players when not connected
+strict: true
 ```
 
 Servers are authenticated with passwords.
