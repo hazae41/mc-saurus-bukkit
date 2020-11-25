@@ -1,7 +1,7 @@
 name: Saurus
 version: "1.0"
 description: Saurus
-main: Saurus
+main: hazae41.saurus.Saurus
 author: hazae41
 
 commands:

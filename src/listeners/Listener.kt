@@ -1,7 +1,7 @@
-package listeners
+package hazae41.saurus.listeners
 
-import Saurus
 import com.google.gson.JsonElement
+import hazae41.saurus.Saurus
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch

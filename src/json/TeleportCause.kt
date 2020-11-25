@@ -1,4 +1,4 @@
-package json
+package hazae41.saurus.json
 
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.*

@@ -1,7 +1,7 @@
-package listeners
+package hazae41.saurus.listeners
 
-import Saurus
-import json.Event
+import hazae41.saurus.Saurus
+import hazae41.saurus.json.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener

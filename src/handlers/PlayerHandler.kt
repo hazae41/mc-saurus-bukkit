@@ -1,12 +1,12 @@
-package handlers
+package hazae41.saurus.handlers
 
-import WSChannel
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
-import getOrNull
-import json.toJson
-import json.toLocation
-import json.toTeleportCause
+import hazae41.saurus.WSChannel
+import hazae41.saurus.json.getOrNull
+import hazae41.saurus.json.toJson
+import hazae41.saurus.json.toLocation
+import hazae41.saurus.json.toTeleportCause
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch

@@ -1,4 +1,4 @@
-package json
+package hazae41.saurus.json
 
 import com.google.gson.JsonObject
 import org.bukkit.Bukkit

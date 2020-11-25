@@ -1,3 +1,5 @@
+package hazae41.saurus
+
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import io.ktor.http.cio.websocket.*
