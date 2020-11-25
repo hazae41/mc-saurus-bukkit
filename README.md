@@ -2,6 +2,10 @@
 
 ### [Download Saurus](https://github.com/saurusmc/saurus-bukkit/raw/master/build/libs/saurus-1.0.jar)
 
+### Features
+
+- Strict mode: disallow players from entering the server when not connected to Saurus
+
 ### Configuration
 
 Edit the config
@@ -12,7 +16,7 @@ name: myserver
 # Address of your Saurus
 host: mysaurus.xyz
 port: 8443
-# Disallow players when not connected
+# Strict mode
 strict: true
 ```
 
