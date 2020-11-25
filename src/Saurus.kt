@@ -1,5 +1,9 @@
+package hazae41.saurus
+
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import hazae41.saurus.listeners.PlayerListener
+import hazae41.saurus.listeners.WeatherListener
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.features.websocket.*
@@ -10,8 +14,6 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import listeners.PlayerListener
-import listeners.WeatherListener
 import org.bukkit.plugin.java.JavaPlugin
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -22,7 +24,6 @@ class Saurus : JavaPlugin() {
 
   val ping = AtomicBoolean(false)
 
-  @KtorExperimentalAPI
   override fun onEnable() {
     super.onEnable()
     this.saveDefaultConfig()
@@ -108,7 +109,7 @@ class Saurus : JavaPlugin() {
     session = this;
 
     server.scheduler.runTask(this@Saurus) { _ ->
-      val e = OpenEvent()
+      val e = SaurusOpenEvent()
       server.pluginManager.callEvent(e)
     }
 
@@ -123,7 +124,7 @@ class Saurus : JavaPlugin() {
       onmessage(frame)
 
     server.scheduler.runTask(this@Saurus) { _ ->
-      val e = CloseEvent()
+      val e = SaurusCloseEvent()
       server.pluginManager.callEvent(e)
     }
 

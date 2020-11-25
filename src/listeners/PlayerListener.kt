@@ -1,8 +1,8 @@
-package listeners
+package hazae41.saurus.listeners
 
-import Saurus
-import json.PlayerEvent
-import json.toJson
+import hazae41.saurus.Saurus
+import hazae41.saurus.json.PlayerEvent
+import hazae41.saurus.json.toJson
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -10,13 +10,6 @@ import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.*
 
 class PlayerListener(val saurus: Saurus) : Listener {
-
-  @EventHandler
-  fun onLogin(e: PlayerLoginEvent) {
-    if (saurus.session != null) return;
-    e.result = PlayerLoginEvent.Result.KICK_OTHER
-    e.kickMessage = "Server is not ready"
-  }
 
   @EventHandler(priority = EventPriority.NORMAL)
   fun onCommand(e: PlayerCommandPreprocessEvent) {

@@ -3,7 +3,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.4.10'
 }
 
-group 'hazae41.'
+group 'hazae41.saurus'
 version '1.0'
 
 sourceSets {
@@ -24,10 +24,9 @@ repositories {
 dependencies {
     implementation 'org.spigotmc:spigot-api:1.16.2-R0.1-SNAPSHOT'
     implementation "org.jetbrains.kotlin:kotlin-stdlib"
-    compile "io.ktor:ktor-gson:$ktor_version"
     compile "io.ktor:ktor-client-core:$ktor_version"
     compile "io.ktor:ktor-client-core-jvm:$ktor_version"
-    compile "io.ktor:ktor-client-cio:$ktor_version"
+    compile "io.ktor:ktor-client-cio-jvm:$ktor_version"
     compile "io.ktor:ktor-websockets:$ktor_version"
     compile "io.ktor:ktor-client-websockets:$ktor_version"
 }

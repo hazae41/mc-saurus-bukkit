@@ -1,9 +1,11 @@
+package hazae41.saurus
+
 import com.google.gson.JsonElement
 import org.bukkit.event.Event
 import org.bukkit.event.HandlerList
 
-class OpenEvent() : Event() {
-  override fun getHandlers() = OpenEvent.handlers
+class SaurusOpenEvent() : Event() {
+  override fun getHandlers() = SaurusOpenEvent.handlers
 
   companion object {
     @JvmStatic
@@ -12,8 +14,8 @@ class OpenEvent() : Event() {
   }
 }
 
-class CloseEvent() : Event() {
-  override fun getHandlers() = CloseEvent.handlers
+class SaurusCloseEvent() : Event() {
+  override fun getHandlers() = SaurusCloseEvent.handlers
 
   companion object {
     @JvmStatic
