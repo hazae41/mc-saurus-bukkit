@@ -25,7 +25,7 @@ class SaurusCloseEvent() : Event() {
 }
 
 class ChannelOpenEvent(
-  val channel: WSChannel,
+  val channel: Channel,
   val path: String,
   val data: JsonElement?
 ) : Event() {
@@ -39,7 +39,7 @@ class ChannelOpenEvent(
 }
 
 class ChannelMessageEvent(
-  val channel: WSChannel,
+  val channel: Channel,
   val data: JsonElement?
 ) : Event() {
   override fun getHandlers() = ChannelMessageEvent.handlers
@@ -52,7 +52,7 @@ class ChannelMessageEvent(
 }
 
 class ChannelCloseEvent(
-  val channel: WSChannel,
+  val channel: Channel,
   val reason: String
 ) : Event() {
   override fun getHandlers() = ChannelCloseEvent.handlers

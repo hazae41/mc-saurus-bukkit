@@ -10,29 +10,8 @@ import kotlinx.coroutines.launch
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
-import org.bukkit.event.player.PlayerLoginEvent
-import org.bukkit.event.player.PlayerLoginEvent.Result.KICK_OTHER
-import org.bukkit.event.server.ServerListPingEvent
 
 class Handler(val saurus: Saurus) : Listener {
-
-  @EventHandler(priority = EventPriority.MONITOR)
-  fun onPing(e: ServerListPingEvent) {
-    e.motd = "Server is starting..."
-  }
-
-  @EventHandler
-  fun onLogin(e: PlayerLoginEvent) {
-    if (saurus.session != null) return;
-    e.disallow(KICK_OTHER, "Server is starting...")
-  }
-
-  @EventHandler(priority = EventPriority.MONITOR)
-  fun onClose(e: SaurusCloseEvent) {
-    saurus.server.onlinePlayers.forEach {
-      it.kickPlayer("Disconnected")
-    }
-  }
 
   @EventHandler(priority = EventPriority.MONITOR)
   fun onMessage(e: ChannelOpenEvent) {
@@ -59,17 +38,17 @@ class Handler(val saurus: Saurus) : Listener {
     }
   }
 
-  fun handleEvents(channel: WSChannel) {
+  fun handleEvents(channel: Channel) {
     if (saurus.events !== null)
       throw Exception("Already opened")
 
     val session = saurus.session!!
     val uuid = channel.uuid
 
-    saurus.events = WSChannel(session, uuid)
+    saurus.events = Channel(session, uuid)
   }
 
-  fun handleExecute(channel: WSChannel, data: JsonElement) {
+  fun handleExecute(channel: Channel, data: JsonElement) {
     val server = saurus.server
     val command = data.asString
     val sender = server.consoleSender
@@ -80,7 +59,7 @@ class Handler(val saurus: Saurus) : Listener {
     GlobalScope.launch(IO) { channel.close(done) }
   }
 
-  fun handlePlayer(channel: WSChannel, data: JsonElement, path: String?) {
+  fun handlePlayer(channel: Channel, data: JsonElement, path: String?) {
     val req = data.asJsonObject
 
     val player = req.get("player")

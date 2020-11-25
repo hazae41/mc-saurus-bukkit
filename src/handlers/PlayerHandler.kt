@@ -2,7 +2,7 @@ package hazae41.saurus.handlers
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
-import hazae41.saurus.WSChannel
+import hazae41.saurus.Channel
 import hazae41.saurus.json.getOrNull
 import hazae41.saurus.json.toJson
 import hazae41.saurus.json.toLocation
@@ -18,7 +18,7 @@ import java.util.*
 
 class PlayerHandler(
   val player: Player,
-  val channel: WSChannel,
+  val channel: Channel,
   val data: JsonObject,
 ) {
   fun handle(path: String?) {
