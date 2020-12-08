@@ -1,19 +1,19 @@
 package hazae41.saurus
 
+import com.destroystokyo.paper.event.server.PaperServerListPingEvent
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerLoginEvent
 import org.bukkit.event.player.PlayerLoginEvent.Result.KICK_OTHER
-import org.bukkit.event.server.ServerListPingEvent
 
 class Strict(val saurus: Saurus) : Listener {
 
   @EventHandler(priority = EventPriority.MONITOR)
-  fun onPing(e: ServerListPingEvent) {
+  fun onPing(e: PaperServerListPingEvent) {
     if (saurus.session != null) return;
     if (!saurus.config.strict) return
-    e.motd = "Server is starting..."
+    e.isCancelled = true
   }
 
   @EventHandler

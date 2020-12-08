@@ -1,5 +1,7 @@
 # Saurus for Bukkit
 
+⚠️This plugin requires PaperSpigot
+
 ### [Download Saurus](https://github.com/saurusmc/saurus-bukkit/raw/master/build/libs/saurus-1.0.jar)
 
 ### Configuration

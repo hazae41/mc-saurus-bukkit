@@ -22,6 +22,7 @@ data class Config(
   val name: String,
   val host: String,
   val port: Int,
+  val delay: Long,
   val strict: Boolean
 )
 
@@ -47,9 +48,11 @@ class Saurus : JavaPlugin() {
 
     val port = getConfig().getInt("port", 8443)
 
+    val delay = getConfig().getLong("delay", 5000)
+
     val strict = getConfig().getBoolean("strict")
 
-    config = Config(name, host, port, strict)
+    config = Config(name, host, port, delay, strict)
 
     val password = File(dataFolder, "password.txt").run {
       if (!exists()) throw Exception("No password.txt file")
@@ -83,7 +86,8 @@ class Saurus : JavaPlugin() {
         }
       } catch (e: Exception) {
         logger.warning(e.message)
-        delay(5000)
+      } finally {
+        delay(config.delay)
       }
     }
   }

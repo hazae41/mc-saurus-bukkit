@@ -1,4 +1,5 @@
 name: sunship
 host: sunship.tk
 port: 8443
+delay: 5000
 strict: true
