@@ -18,7 +18,9 @@ name: myserver
 # Address of your Saurus
 host: mysaurus.xyz
 port: 8443
-# Strict mode
+# Delay between each connection attempts
+delay: 5000
+# Strict mode: disallow players when not connected
 strict: true
 ```
 
